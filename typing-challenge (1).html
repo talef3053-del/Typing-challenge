@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Typing Challenge Game</title>
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 20px 14px 40px;
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: #fff;
+    text-align: center;
+    background: linear-gradient(135deg, #1e1b4b, #4c1d95, #0e7490);
+    background-attachment: fixed;
+  }
+
+  h1 {
+    font-size: 2.4rem;
+    margin: 10px 0 4px;
+    background: linear-gradient(90deg, #fde68a, #f9a8d4, #67e8f9);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .subtitle { opacity: 0.8; margin-bottom: 24px; }
+
+  .hidden { display: none; }
+  .screen { max-width: 860px; margin: 0 auto; }
+
+  /* glass cards */
+  .card {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 18px;
+    padding: 22px;
+    margin: 10px;
+    flex: 1 1 290px;
+    max-width: 400px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+  }
+  .card h2 { margin-top: 0; font-size: 1.6rem; }
+  .card p { opacity: 0.9; line-height: 1.5; }
+  .cards { display: flex; flex-wrap: wrap; justify-content: center; }
+  .wide { max-width: 420px; margin: 10px auto 20px; }
+
+  label { display: block; margin: 8px 0 4px; font-weight: 600; }
+  select {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+    border-radius: 10px;
+    border: none;
+    background: rgba(255, 255, 255, 0.9);
+    margin-bottom: 10px;
+  }
+
+  button {
+    border: none;
+    border-radius: 25px;
+    padding: 11px 24px;
+    margin: 6px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #fff;
+    cursor: pointer;
+    background: linear-gradient(90deg, #f59e0b, #ef4444);
+    transition: transform 0.15s;
+  }
+  button:hover { transform: scale(1.06); }
+  button:disabled { background: #6b7280; cursor: not-allowed; transform: none; }
+  .btn-blue { background: linear-gradient(90deg, #06b6d4, #6366f1); }
+  .btn-grey { background: linear-gradient(90deg, #64748b, #475569); }
+
+  /* status pills */
+  #status { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 12px 0; }
+  #status span {
+    background: rgba(255, 255, 255, 0.18);
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-size: 0.95rem;
+  }
+
+  #feedback { font-weight: bold; min-height: 26px; font-size: 1.1rem; }
+  .good-text { color: #86efac; }
+  .bad-text { color: #fca5a5; }
+
+  /* ---------- Bubbles ---------- */
+  #bubbleArea {
+    position: relative;
+    height: 400px;
+    overflow: hidden;
+    border-radius: 18px;
+    border: 4px solid rgba(255, 255, 255, 0.35);
+    background: linear-gradient(to top, #0c4a6e, #0f172a);
+  }
+  #bubbleArea.flash-good { border-color: #4ade80; box-shadow: 0 0 25px #4ade80; }
+  #bubbleArea.flash-bad  { border-color: #f87171; box-shadow: 0 0 25px #f87171; }
+
+  .bubble {
+    position: absolute;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    line-height: 54px;
+    font-size: 24px;
+    font-weight: bold;
+    color: #0c4a6e;
+    cursor: pointer;
+    user-select: none;
+    background: radial-gradient(circle at 30% 30%, #fff, #7dd3fc 50%, #38bdf8);
+    box-shadow: 0 0 14px rgba(125, 211, 252, 0.8);
+  }
+
+  /* ---------- KeyMagnet ---------- */
+  #targetKey {
+    width: 120px;
+    height: 120px;
+    line-height: 120px;
+    margin: 10px auto 22px;
+    font-size: 64px;
+    font-weight: bold;
+    border-radius: 24px;
+    color: #1e1b4b;
+    background: linear-gradient(135deg, #fde68a, #f59e0b);
+    box-shadow: 0 0 25px rgba(253, 224, 71, 0.7);
+  }
+  #targetKey.flash-good { background: #4ade80; box-shadow: 0 0 30px #4ade80; }
+  #targetKey.flash-bad  { background: #f87171; box-shadow: 0 0 30px #f87171; }
+
+  .kb-row { display: flex; justify-content: center; }
+  .key {
+    width: 9%;
+    min-width: 28px;
+    max-width: 52px;
+    padding: 12px 0;
+    margin: 3px;
+    border-radius: 10px;
+    color: #1e1b4b;
+    background: #e0e7ff;
+  }
+  .key.off { opacity: 0.3; }
+  .key.target { background: #fbbf24; box-shadow: 0 0 12px #fbbf24; }
+  .key.wrong { background: #f87171; }
+
+  #resultStats { list-style: none; padding: 0; font-size: 1.15rem; line-height: 2; }
+  #resultStats li { border-bottom: 1px solid rgba(255, 255, 255, 0.15); }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 1.8rem; }
+    #bubbleArea { height: 330px; }
+    #targetKey { width: 95px; height: 95px; line-height: 95px; font-size: 50px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>⌨️ Typing Challenge</h1>
+<div class="subtitle">Train your speed, accuracy and focus</div>
+
+<!-- HOME SCREEN -->
+<section id="home" class="screen">
+  <div class="card wide">
+    <label for="difficulty">Choose difficulty</label>
+    <select id="difficulty">
+      <option value="easy">Easy</option>
+      <option value="medium">Medium</option>
+      <option value="hard">Hard</option>
+    </select>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <h2>🫧 Bubbles</h2>
+      <p>Letters float upward inside bubbles. Press the matching key to pop them before they reach the top!</p>
+      <button id="startBubbles">Start</button>
+    </div>
+
+    <div class="card">
+      <h2>🧲 KeyMagnet</h2>
+      <p>A target key appears. Press it as fast and as accurately as you can before time runs out.</p>
+      <label for="keyset">Key set</label>
+      <select id="keyset">
+        <option value="home">Home row (A S D F J K L)</option>
+        <option value="top">Top row (Q - P)</option>
+        <option value="bottom">Bottom row (Z - M)</option>
+        <option value="all">All letters</option>
+      </select>
+      <button id="startMagnet">Start</button>
+    </div>
+  </div>
+</section>
+
+<!-- GAME SCREEN -->
+<section id="game" class="screen hidden">
+  <h2 id="modeTitle"></h2>
+  <div id="status"></div>
+
+  <div>
+    <button id="btnStart" class="btn-blue">Start</button>
+    <button id="btnRestart">Restart</button>
+    <button id="btnReset" class="btn-grey">Reset</button>
+  </div>
+
+  <p id="feedback"></p>
+
+  <div id="bubbleArea" class="hidden"></div>
+
+  <div id="magnetArea" class="hidden">
+    <div id="targetKey">?</div>
+    <div id="keyboard"></div>
+  </div>
+</section>
+
+<!-- RESULTS SCREEN -->
+<section id="results" class="screen hidden">
+  <div class="card wide">
+    <h2 id="resultTitle"></h2>
+    <ul id="resultStats"></ul>
+    <button id="btnAgain">Play Again</button>
+    <button id="btnHome" class="btn-grey">Home</button>
+  </div>
+</section>
+
+<script>
+// ---------- Settings ----------
+var bubbleSettings = {
+  easy:   { speed: 1,   minBubbles: 5, missLimit: 8 },
+  medium: { speed: 1.8, minBubbles: 6, missLimit: 6 },
+  hard:   { speed: 2.6, minBubbles: 7, missLimit: 5 }
+};
+
+var magnetSettings = {
+  easy:   { time: 60, perKey: 4000 },   // total seconds, milliseconds allowed per key
+  medium: { time: 45, perKey: 2500 },
+  hard:   { time: 30, perKey: 1500 }
+};
+
+var keySets = {
+  home:   ["A", "S", "D", "F", "J", "K", "L"],
+  top:    ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+  bottom: ["Z", "X", "C", "V", "B", "N", "M"],
+  all:    ["A","B","C","D","E","F","G","H","I","J","K","L","M",
+           "N","O","P","Q","R","S","T","U","V","W","X","Y","Z"]
+};
+
+var keyboardRows = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
+var allLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+// ---------- Shared state ----------
+var mode = "";          // "bubbles" or "magnet"
+var running = false;
+var timer = null;       // the ONLY timer in the game
+var difficulty = "easy";
+var score = 0;
+
+// Bubbles state
+var bubbles = [];
+var misses = 0;
+var popped = 0;
+var bubbleWrong = 0;
+var bubbleSpeed = 1;
+var minBubbles = 5;
+var missLimit = 6;
+
+// KeyMagnet state
+var keySetName = "home";
+var currentSet = [];
+var target = "";
+var targetStart = 0;
+var endTime = 0;
+var timeLeft = 0;
+var correct = 0;
+var wrong = 0;
+var responseTimes = [];
+
+// ---------- Helper functions ----------
+function $(id) {
+  return document.getElementById(id);
+}
+
+function showScreen(id) {
+  $("home").classList.add("hidden");
+  $("game").classList.add("hidden");
+  $("results").classList.add("hidden");
+  $(id).classList.remove("hidden");
+}
+
+function stopTimer() {
+  clearInterval(timer);
+  timer = null;
+}
+
+function setFeedback(text, good) {
+  $("feedback").textContent = text;
+  if (good) {
+    $("feedback").className = "good-text";
+  } else {
+    $("feedback").className = "bad-text";
+  }
+}
+
+// adds a color class for a short moment, then removes it
+function flash(element, good) {
+  var cls = "flash-bad";
+  if (good) {
+    cls = "flash-good";
+  }
+  element.classList.add(cls);
+  setTimeout(function () {
+    element.classList.remove(cls);
+  }, 200);
+}
+
+// returns the position of the bubble with this letter, or -1 if none
+function findBubbleIndex(letter) {
+  for (var i = 0; i < bubbles.length; i++) {
+    if (bubbles[i].letter === letter) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+// ---------- Start / Restart / Reset / End ----------
+function startGame(selectedMode) {
+  stopTimer();                       // never keep an old timer running
+  mode = selectedMode;
+  difficulty = $("difficulty").value;
+  keySetName = $("keyset").value;
+
+  score = 0;
+  running = true;
+  $("bubbleArea").innerHTML = "";
+  $("btnStart").disabled = true;
+
+  if (mode === "bubbles") {
+    $("bubbleArea").classList.remove("hidden");
+    $("magnetArea").classList.add("hidden");
+  } else {
+    $("bubbleArea").classList.add("hidden");
+    $("magnetArea").classList.remove("hidden");
+  }
+  showScreen("game");
+
+  if (mode === "bubbles") {
+    startBubbles();
+  } else {
+    startMagnet();
+  }
+}
+
+function resetGame() {
+  stopTimer();
+  running = false;
+  bubbles = [];
+  $("bubbleArea").innerHTML = "";
+  $("btnStart").disabled = false;
+  showScreen("home");
+}
+
+function endGame() {
+  stopTimer();
+  running = false;
+  $("btnStart").disabled = false;
+
+  var html = "";
+  if (mode === "bubbles") {
+    $("resultTitle").textContent = "💥 Game Over!";
+    html += "<li>Score: " + score + "</li>";
+    html += "<li>Bubbles popped: " + popped + "</li>";
+    html += "<li>Misses: " + misses + " / " + missLimit + "</li>";
+    html += "<li>Wrong key presses: " + bubbleWrong + "</li>";
+    html += "<li>Difficulty: " + difficulty + "</li>";
+  } else {
+    var total = correct + wrong;
+    var accuracy = 0;
+    if (total > 0) {
+      accuracy = Math.round((correct / total) * 100);
+    }
+
+    // average and best response time
+    var sum = 0;
+    var best = 0;
+    var avg = 0;
+    if (responseTimes.length > 0) {
+      best = responseTimes[0];
+      for (var i = 0; i < responseTimes.length; i++) {
+        sum = sum + responseTimes[i];
+        if (responseTimes[i] < best) {
+          best = responseTimes[i];
+        }
+      }
+      avg = (sum / responseTimes.length / 1000).toFixed(2);
+      best = (best / 1000).toFixed(2);
+    }
+
+    $("resultTitle").textContent = "⏱️ Time's Up!";
+    html += "<li>Score: " + score + "</li>";
+    html += "<li>Correct: " + correct + "</li>";
+    html += "<li>Incorrect: " + wrong + "</li>";
+    html += "<li>Accuracy: " + accuracy + "%</li>";
+    html += "<li>Average response time: " + avg + " s</li>";
+    html += "<li>Best response time: " + best + " s</li>";
+    html += "<li>Key set: " + keySetName + " | Difficulty: " + difficulty + "</li>";
+  }
+  $("resultStats").innerHTML = html;
+  showScreen("results");
+}
+
+// ---------- MODE A: Bubbles ----------
+function startBubbles() {
+  var s = bubbleSettings[difficulty];
+  bubbles = [];
+  misses = 0;
+  popped = 0;
+  bubbleWrong = 0;
+  bubbleSpeed = s.speed;
+  minBubbles = s.minBubbles;
+  missLimit = s.missLimit;
+
+  $("modeTitle").textContent = "🫧 Bubbles";
+  setFeedback("Pop the bubbles! Press the matching letter.", true);
+  updateStatus();
+  timer = setInterval(bubbleTick, 30);
+}
+
+function randomLetter() {
+  var letter = allLetters[Math.floor(Math.random() * 26)];
+  // keep picking until the letter is not already on screen
+  while (findBubbleIndex(letter) !== -1) {
+    letter = allLetters[Math.floor(Math.random() * 26)];
+  }
+  return letter;
+}
+
+function spawnBubble() {
+  var area = $("bubbleArea");
+  var el = document.createElement("div");
+  el.className = "bubble";
+  var letter = randomLetter();
+  el.textContent = letter;
+  el.style.left = Math.random() * (area.clientWidth - 60) + "px";
+
+  var bubble = { el: el, letter: letter, y: -Math.random() * 40 };
+  el.style.bottom = bubble.y + "px";
+  el.onclick = function () {         // tapping also works on mobile
+    bubblePress(letter);
+  };
+  area.appendChild(el);
+  bubbles.push(bubble);
+}
+
+function bubbleTick() {
+  var height = $("bubbleArea").clientHeight;
+
+  // go backwards so removing a bubble does not skip the next one
+  for (var i = bubbles.length - 1; i >= 0; i--) {
+    var b = bubbles[i];
+    b.y = b.y + bubbleSpeed;
+    b.el.style.bottom = b.y + "px";
+    if (b.y >= height - 54) {        // reached the top = miss
+      b.el.remove();
+      bubbles.splice(i, 1);
+      misses++;
+      flash($("bubbleArea"), false);
+      setFeedback("Missed a bubble!", false);
+    }
+  }
+
+  // keep at least minBubbles (5 or more) on screen
+  while (bubbles.length < minBubbles) {
+    spawnBubble();
+  }
+
+  updateStatus();
+  if (misses >= missLimit) {
+    endGame();
+  }
+}
+
+function bubblePress(letter) {
+  if (running === false || mode !== "bubbles") {
+    return;
+  }
+  var index = findBubbleIndex(letter);
+
+  if (index !== -1) {
+    bubbles[index].el.remove();
+    bubbles.splice(index, 1);
+    score = score + 10;
+    popped++;
+    flash($("bubbleArea"), true);
+    setFeedback("Correct! +10", true);
+
+    // difficulty grows as the player pops more bubbles
+    bubbleSpeed = bubbleSettings[difficulty].speed + Math.floor(popped / 5) * 0.3;
+    minBubbles = bubbleSettings[difficulty].minBubbles + Math.floor(popped / 10);
+    if (minBubbles > 10) {
+      minBubbles = 10;
+    }
+  } else {
+    score = Math.max(0, score - 5);  // penalty, score never below 0
+    bubbleWrong++;
+    flash($("bubbleArea"), false);
+    setFeedback("Wrong key! -5", false);
+  }
+  updateStatus();
+}
+
+// ---------- MODE B: KeyMagnet ----------
+function startMagnet() {
+  var s = magnetSettings[difficulty];
+  currentSet = keySets[keySetName];
+  correct = 0;
+  wrong = 0;
+  responseTimes = [];
+  target = "";
+  endTime = Date.now() + s.time * 1000;
+  timeLeft = s.time;
+
+  $("modeTitle").textContent = "🧲 KeyMagnet";
+  setFeedback("Press the target key!", true);
+  buildKeyboard();
+  newTarget();
+  updateStatus();
+  timer = setInterval(magnetTick, 100);
+}
+
+function buildKeyboard() {
+  var kb = $("keyboard");
+  kb.innerHTML = "";
+
+  for (var r = 0; r < keyboardRows.length; r++) {
+    var row = keyboardRows[r];
+    var div = document.createElement("div");
+    div.className = "kb-row";
+
+    for (var c = 0; c < row.length; c++) {
+      var ch = row[c];
+      var btn = document.createElement("button");
+      btn.className = "key";
+      btn.id = "key-" + ch;
+      btn.textContent = ch;
+
+      // keys that are not in the chosen set look faded
+      if (currentSet.indexOf(ch) === -1) {
+        btn.classList.add("off");
+      }
+      btn.onclick = makeKeyClick(ch);
+      div.appendChild(btn);
+    }
+    kb.appendChild(div);
+  }
+}
+
+// gives each on-screen key its own click action
+function makeKeyClick(ch) {
+  return function () {
+    magnetPress(ch);
+  };
+}
+
+function newTarget() {
+  var old = $("key-" + target);
+  if (old) {
+    old.classList.remove("target");
+  }
+
+  var next = currentSet[Math.floor(Math.random() * currentSet.length)];
+  // avoid showing the same key twice in a row
+  while (next === target && currentSet.length > 1) {
+    next = currentSet[Math.floor(Math.random() * currentSet.length)];
+  }
+
+  target = next;
+  targetStart = Date.now();
+  $("targetKey").textContent = target;
+  $("key-" + target).classList.add("target");
+}
+
+function magnetTick() {
+  var now = Date.now();
+  timeLeft = Math.max(0, Math.ceil((endTime - now) / 1000));
+
+  // player took too long on this key
+  if (now - targetStart > magnetSettings[difficulty].perKey) {
+    wrong++;
+    flash($("targetKey"), false);
+    setFeedback("Too slow!", false);
+    newTarget();
+  }
+
+  updateStatus();
+  if (now >= endTime) {
+    endGame();
+  }
+}
+
+function magnetPress(ch) {
+  if (running === false || mode !== "magnet") {
+    return;
+  }
+  var keyBtn = $("key-" + ch);
+
+  if (ch === target) {
+    var rt = Date.now() - targetStart;     // response time in milliseconds
+    responseTimes.push(rt);
+    correct++;
+    var points = 10;
+    if (rt < 1000) {
+      points = points + 5;                 // speed bonus
+    }
+    score = score + points;
+    flash($("targetKey"), true);
+    setFeedback("Correct! +" + points + " (" + (rt / 1000).toFixed(2) + "s)", true);
+    newTarget();
+  } else {
+    wrong++;
+    score = Math.max(0, score - 2);
+    flash($("targetKey"), false);
+    keyBtn.classList.add("wrong");
+    setTimeout(function () {
+      keyBtn.classList.remove("wrong");
+    }, 200);
+    setFeedback("Wrong key! -2", false);
+  }
+  updateStatus();
+}
+
+// ---------- Status bar ----------
+function updateStatus() {
+  var html = "<span>⭐ Score: " + score + "</span>";
+  html += "<span>🎚️ " + difficulty + "</span>";
+  if (mode === "bubbles") {
+    html += "<span>💔 Misses: " + misses + " / " + missLimit + "</span>";
+    html += "<span>❌ Wrong: " + bubbleWrong + "</span>";
+  } else {
+    html += "<span>⏳ Time: " + timeLeft + "s</span>";
+    html += "<span>✅ Correct: " + correct + "</span>";
+    html += "<span>❌ Incorrect: " + wrong + "</span>";
+  }
+  $("status").innerHTML = html;
+}
+
+// ---------- Buttons and keyboard ----------
+$("startBubbles").onclick = function () { startGame("bubbles"); };
+$("startMagnet").onclick = function () { startGame("magnet"); };
+$("btnStart").onclick = function () {
+  if (running === false) {
+    startGame(mode);
+  }
+};
+$("btnRestart").onclick = function () { startGame(mode); };
+$("btnReset").onclick = resetGame;
+$("btnAgain").onclick = function () { startGame(mode); };
+$("btnHome").onclick = resetGame;
+
+document.onkeydown = function (e) {
+  if (running === false) {
+    return;
+  }
+  var k = e.key.toUpperCase();
+  // only accept single letters A to Z
+  if (k.length !== 1 || k < "A" || k > "Z") {
+    return;
+  }
+  if (mode === "bubbles") {
+    bubblePress(k);
+  } else {
+    magnetPress(k);
+  }
+};
+</script>
+</body>
+</html>
